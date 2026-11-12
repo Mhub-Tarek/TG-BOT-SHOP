@@ -23,17 +23,17 @@ class Settings(BaseSettings):
         "Fast, secure, and fully automated delivery."
     )
     SUPPORT_USERNAME: str = "@MediaHubDigitalMarketplace"
-    CHANNEL_URL: str = ""
+    CHANNEL_URL: str = "https://t.me/mediahubdigitalproducts"
     DEFAULT_DELIVERY_PROMISE: str = "💚 Instant Code Delivery\n🛡 Full Year Warranty"
 
     # Binance API
-    BINANCE_API_KEY: str = ""
-    BINANCE_API_SECRET: str = ""
+    BINANCE_API_KEY: str = "T6Ae5ph10SjyB9xNJSM15kEM3VnGx9gVE86mI3e67A3kty4w9cMuhpG5SFRHUPXk"
+    BINANCE_API_SECRET: str = "uSpSDGaQDYKKR9aydCKaIPtKL2eWs5ZXheuKm5zqobqFvPGUfsyHhGNkJCBcl1yN"
 
     # Payment methods
-    BINANCE_PAY_UID: str = ""
-    USDT_BEP20_ADDRESS: str = ""
-    USDT_TRC20_ADDRESS: str = ""
+    BINANCE_PAY_UID: str = "126035796"
+    USDT_BEP20_ADDRESS: str = "0x887d1cc3b0defa9f409b4ea8eafeab9391dc92d4"
+    USDT_TRC20_ADDRESS: str = "TTffMk3uRtzLPxbTj6kEXAjo36FccnDbHr"
     TRONGRID_API_KEY: str = ""
     ANKR_API_KEY: str = ""
     ANKR_ADVANCED_API_URL: str = ""
