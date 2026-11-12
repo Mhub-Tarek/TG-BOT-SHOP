@@ -281,3 +281,4 @@ Then `docker build -t telegram-shop .` and run with `docker run -d --name shop -
 ## License
 
 MIT.
+# TG-BOT-SHOP
