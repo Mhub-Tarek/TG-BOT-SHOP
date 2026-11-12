@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ shop }} — Admin login</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="stylesheet" href="/static/admin.css" />
+</head>
+<body class="login-body">
+  <form method="post" action="/login" class="login-card">
+    <div class="login-logo" aria-hidden="true">🛍</div>
+    <h1>{{ shop }}</h1>
+    <p class="muted login-sub">Admin sign-in</p>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+    <label>Password
+      <input type="password" name="password" autofocus placeholder="••••••••" />
+    </label>
+    <button type="submit">Sign in</button>
+    <p class="login-foot muted">🔒 Secure admin access</p>
+  </form>
+</body>
+</html>

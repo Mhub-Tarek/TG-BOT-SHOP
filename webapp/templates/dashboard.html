@@ -1,0 +1,50 @@
+﻿{% extends "base.html" %}
+{% from "_order_delivered.html" import delivered_items %}
+{% block content %}
+<h1>Dashboard</h1>
+
+<section class="stats-grid">
+  <div class="stat stat--info"><div class="stat-icon" aria-hidden="true">👥</div><div class="stat-num">{{ stats.users }}</div><div class="stat-label">Users</div></div>
+  <div class="stat stat--info"><div class="stat-icon" aria-hidden="true">📦</div><div class="stat-num">{{ stats.orders }}</div><div class="stat-label">Delivered orders</div></div>
+  <div class="stat stat--money"><div class="stat-icon" aria-hidden="true">💵</div><div class="stat-num">${{ '%.2f' % stats.revenue }}</div><div class="stat-label">Revenue</div></div>
+  <div class="stat stat--money"><div class="stat-icon" aria-hidden="true">📈</div><div class="stat-num">${{ '%.2f' % stats.daily_profit }}</div><div class="stat-label">Profit today</div></div>
+  <div class="stat stat--money"><div class="stat-icon" aria-hidden="true">🗓</div><div class="stat-num">${{ '%.2f' % stats.monthly_profit }}</div><div class="stat-label">Profit this month</div></div>
+  <div class="stat stat--info"><div class="stat-icon" aria-hidden="true">✅</div><div class="stat-num">{{ stats.payments }}</div><div class="stat-label">Confirmed payments</div></div>
+  <div class="stat stat--info"><div class="stat-icon" aria-hidden="true">🎟</div><div class="stat-num">{{ stats.stock }}</div><div class="stat-label">Unsold stock</div></div>
+  <div class="stat warn"><div class="stat-icon" aria-hidden="true">⏳</div><div class="stat-num">{{ stats.pending_orders }}</div><div class="stat-label">Pending orders</div></div>
+  <a class="stat {{ 'warn' if stats.open_tickets else 'stat--info' }}" href="/tickets" style="text-decoration:none"><div class="stat-icon" aria-hidden="true">🎫</div><div class="stat-num">{{ stats.open_tickets }}</div><div class="stat-label">Open tickets</div></a>
+</section>
+
+<h2>Recent orders</h2>
+{% if recent %}
+<div class="table-wrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>#</th><th>When</th><th>User</th><th>Product</th><th>Qty</th>
+      <th>Payable</th><th>Method</th><th>Status</th><th>Delivered items</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for o in recent %}
+    <tr class="row-{{ o.status }}">
+      <td>#{{ o.id }}</td>
+      <td>{{ o.created_at | datetime }}</td>
+      <td>
+        {% if o.user_username %}@{{ o.user_username }}{% else %}<code>{{ o.user_tg_id }}</code>{% endif %}
+      </td>
+      <td>{{ o.product_emoji }} {{ o.product_name }}</td>
+      <td>{{ o.quantity }}</td>
+      <td>${{ '%.2f' % o.payable }}</td>
+      <td>{{ o.payment_method or '-' }}</td>
+      <td><span class="pill pill-{{ o.status }}">{{ o.status }}</span></td>
+      <td class="col-delivered">{{ delivered_items(o, delivered) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted empty-state">No orders yet.</p>
+{% endif %}
+{% endblock %}

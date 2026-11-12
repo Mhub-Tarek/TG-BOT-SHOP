@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+{% from "_logo_picker.html" import logo_picker %}
+{% block content %}
+<h1>Products</h1>
+<p class="muted">Pick a logo for each product — {{ brands|length }} brands available. Shown on shop buttons in Telegram.</p>
+
+<details class="card">
+  <summary>+ Add product</summary>
+  <form method="post" action="/products/new" class="form-grid">
+    <label>Name <input name="name" required placeholder="ElevenLabs Creator 3 Months" /></label>
+    <label class="wide">Shop button logo
+      {{ logo_picker('brand', brands, brand_previews, '', 'new-brand') }}
+    </label>
+    <label>Base price (USDT) <input name="base_price" type="number" step="0.01" required /></label>
+    <label>Refund warranty (days) <input name="warranty_days" type="number" min="0" step="1" value="0" /></label>
+    <label>Unit label <input name="unit_label" value="code" /></label>
+    <label class="wide">Features (one per line, shown in product card)
+      <textarea name="features" rows="3"></textarea>
+    </label>
+    <label class="wide">Description
+      <textarea name="description" rows="2"></textarea>
+    </label>
+    <label class="wide">Delivery instructions <small class="muted">(sent to buyer after payment — e.g. how to redeem)</small>
+      <textarea name="delivery_instructions" rows="3" placeholder="1. Go to site.com/redeem&#10;2. Paste your code&#10;3. Enjoy!"></textarea>
+    </label>
+    <details class="wide advanced-fields">
+      <summary class="muted">Advanced (emoji fallback, custom icon ID)</summary>
+      <label>Emoji fallback <input name="emoji" placeholder="🟢" maxlength="8" /></label>
+      <label>Custom icon ID <input name="icon_custom_emoji_id" placeholder="" /></label>
+    </details>
+    <button type="submit">Create</button>
+  </form>
+</details>
+
+<div class="toolbar product-search" data-product-search>
+  <input
+    id="product-search-input"
+    class="toolbar-search"
+    type="search"
+    placeholder="Search product name..."
+    autocomplete="off"
+    aria-label="Search product name"
+  />
+  <button id="product-search-submit" type="button" class="btn-secondary"{{ ' disabled' if not items else '' }}>
+    Search
+  </button>
+  <button id="product-search-reset" type="button" class="toolbar-clear"{{ ' disabled' if not items else '' }}>
+    Show all
+  </button>
+  <span id="product-search-count" class="toolbar-count">{{ items|length }} products</span>
+</div>
+<p id="product-search-empty" class="muted empty-state product-search-empty" hidden>
+  No products match that name.
+</p>
+
+{% for it in items %}
+<div class="card product-card" id="product-{{ it.p.id }}" data-product-name="{{ it.p.name|lower }}">
+  <div class="prod-head">
+    <h3>
+      {% if it.brand_label %}<span class="prod-logo-badge">{{ it.brand_label }}</span>{% endif %}
+      {{ it.p.name }} <small>#{{ it.p.id }}</small>
+    </h3>
+    <div class="prod-meta">
+      <span class="pill">${{ '%.2f' % it.p.base_price }} / {{ it.p.unit_label }}</span>
+      <span class="pill">Warranty: {{ it.p.warranty_days }}d</span>
+      <span class="pill">Available: {{ it.stock }}</span>
+      <span class="pill">Sold: {{ it.sold }}</span>
+      <span class="pill {{ 'pill-paid' if it.p.active else 'pill-failed' }}">
+        {{ 'active' if it.p.active else 'inactive' }}
+      </span>
+    </div>
+  </div>
+
+  <details data-product-edit>
+    <summary>Edit product &amp; logo</summary>
+    <form method="post" action="/products/{{ it.p.id }}/edit" class="form-grid">
+      <label>Name <input name="name" value="{{ it.p.name }}" required /></label>
+      <label class="wide">Shop button logo
+        {{ logo_picker('brand', brands, brand_previews, it.p.brand|default(''), 'edit-' ~ it.p.id) }}
+      </label>
+      <label>Base price <input name="base_price" type="number" step="0.01" value="{{ it.p.base_price }}" required /></label>
+      <label>Refund warranty (days) <input name="warranty_days" type="number" min="0" step="1" value="{{ it.p.warranty_days }}" /></label>
+      <label>Unit label <input name="unit_label" value="{{ it.p.unit_label }}" /></label>
+      <label class="wide">Features
+        <textarea name="features" rows="3">{{ it.p.features }}</textarea>
+      </label>
+    <label class="wide">Description
+      <textarea name="description" rows="2">{{ it.p.description }}</textarea>
+    </label>
+    <label class="wide">Delivery instructions <small class="muted">(sent to buyer after payment — e.g. how to redeem)</small>
+      <textarea name="delivery_instructions" rows="3" placeholder="1. Go to site.com/redeem&#10;2. Paste your code&#10;3. Enjoy!">{{ it.p.delivery_instructions|default('') }}</textarea>
+    </label>
+    <details class="wide advanced-fields">
+      <summary class="muted">Advanced</summary>
+      <label>Emoji fallback <input name="emoji" value="{{ it.p.emoji }}" maxlength="8" /></label>
+      <label>Custom icon ID <input name="icon_custom_emoji_id" value="{{ it.p.icon_custom_emoji_id|default('') }}" /></label>
+    </details>
+    <button type="submit">Save</button>
+  </form>
+  </details>
+
+  <details>
+    <summary>Manage stock ({{ it.stock }} available)</summary>
+    <div class="stock-panel">
+      {% if it.stock_rows %}
+      <form method="post" action="/products/{{ it.p.id }}/stock/delete-selected"
+            class="stock-bulk-form">
+        <div class="table-wrap">
+        <table class="data stock-table">
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" class="stock-select-all" title="Select all" /></th>
+              <th>ID</th>
+              <th>Content</th>
+              <th>Cost</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in it.stock_rows %}
+            <tr>
+              <td><input type="checkbox" name="item_ids" value="{{ s.id }}" class="stock-cb" /></td>
+              <td><code>{{ s.id }}</code></td>
+              <td class="stock-content"><code>{{ s.content }}</code></td>
+              <td class="stock-cost">{% if s.cost is not none %}${{ '%.2f' % s.cost }}{% else %}<span class="muted">—</span>{% endif %}</td>
+              <td class="stock-actions">
+                <button type="submit" class="btn-danger btn-sm"
+                        formaction="/products/{{ it.p.id }}/stock/{{ s.id }}/delete"
+                        formmethod="post"
+                        onclick="return confirm('Delete this stock item?')">Delete</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div class="stock-bulk-actions">
+          <button type="submit" class="btn-danger btn-sm"
+                  onclick="return confirm('Delete selected stock items? This cannot be undone.')">Delete selected</button>
+        </div>
+      </form>
+      {% else %}
+      <p class="muted">No stock in inventory — add items below.</p>
+      {% endif %}
+
+      <form method="post" action="/products/{{ it.p.id }}/stock" class="form-grid stock-add-form">
+        <label class="wide">Add stock — one item per line
+          <textarea name="items" rows="5" placeholder="key-1&#10;key-2&#10;login:pass"></textarea>
+        </label>
+        <label>Cost per item ($) — what you paid
+          <input type="number" name="cost" step="0.01" min="0" placeholder="optional, e.g. 3.00" />
+        </label>
+        <p class="muted wide">Applies to every line in this batch. Leave blank to leave it untracked — those sales won't count toward profit.</p>
+        <button type="submit">Add to stock</button>
+      </form>
+    </div>
+  </details>
+
+  <details>
+    <summary>Bulk pricing tier</summary>
+    <p class="muted">Set a lower <b>per-unit price</b> for larger quantities. Leave empty to show no bulk pricing. Re-adding the same min qty updates it.</p>
+    <form method="post" action="/products/{{ it.p.id }}/tier" class="form-grid">
+      <label>Min qty <input name="min_qty" type="number" min="2" required placeholder="10" /></label>
+      <label>Price each ($) <input name="unit_price" type="number" step="0.01" min="0.01" required placeholder="1.80" /></label>
+      <button type="submit">Add tier</button>
+    </form>
+    {% if it.tiers %}
+    <ul class="tiers">
+      {% for t in it.tiers %}
+        <li>
+          {{ t.min_qty }}+ → <b>${{ '%.2f' % t.unit_price }}</b> / {{ it.p.unit_label }}
+          <form method="post" action="/products/{{ it.p.id }}/tier/delete" style="display:inline">
+            <input type="hidden" name="min_qty" value="{{ t.min_qty }}" />
+            <button type="submit" class="btn-danger btn-sm"
+                    onclick="return confirm('Remove the {{ t.min_qty }}+ tier?')">Remove</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </details>
+
+  <div class="row-actions">
+    <form method="post" action="/products/{{ it.p.id }}/move/up" style="display:inline">
+      <button class="btn-secondary" title="Move up"{{ ' disabled' if loop.first else '' }}>↑ Up</button>
+    </form>
+    <form method="post" action="/products/{{ it.p.id }}/move/down" style="display:inline">
+      <button class="btn-secondary" title="Move down"{{ ' disabled' if loop.last else '' }}>↓ Down</button>
+    </form>
+    <form method="post" action="/products/{{ it.p.id }}/toggle" style="display:inline">
+      <button class="btn-secondary">{{ 'Deactivate' if it.p.active else 'Activate' }}</button>
+    </form>
+    <form method="post" action="/products/{{ it.p.id }}/delete" style="display:inline"
+          class="js-delete-form" data-pname="{{ it.p.name }}" data-sold="{{ it.sold }}">
+      <button class="btn-danger">Delete</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<p class="muted empty-state">No products yet. Add one above.</p>
+{% endfor %}
+
+<script>
+// Delete confirmation. The product name is read from a data-* attribute (which
+// Jinja HTML-escapes) and used purely as a JS string value — never interpolated
+// into executable JS source — so a name containing quotes can't break out and
+// run script. (review M7)
+document.querySelectorAll('.js-delete-form').forEach(function (form) {
+  form.addEventListener('submit', function (e) {
+    var name = form.getAttribute('data-pname') || '';
+    var sold = form.getAttribute('data-sold') || '0';
+    var ok = confirm(
+      'Delete "' + name + '" permanently?\n\n' +
+      'This removes the product, its remaining stock, and ' + sold +
+      ' past order(s) for it. Payment records stay (with the order link ' +
+      'cleared). Use Deactivate instead if you just want to hide it from the shop.'
+    );
+    if (!ok) e.preventDefault();
+  });
+});
+
+(function () {
+  var input = document.getElementById('product-search-input');
+  if (!input) return;
+
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.product-card'));
+  var submit = document.getElementById('product-search-submit');
+  var reset = document.getElementById('product-search-reset');
+  var count = document.getElementById('product-search-count');
+  var empty = document.getElementById('product-search-empty');
+
+  function applyProductSearch() {
+    var q = input.value.trim().toLowerCase();
+    var shown = 0;
+
+    cards.forEach(function (card) {
+      var name = card.dataset.productName || '';
+      var show = !q || name.indexOf(q) !== -1;
+      card.classList.toggle('is-search-hidden', !show);
+      if (show) shown += 1;
+    });
+
+    if (count) {
+      count.textContent = q
+        ? shown + ' of ' + cards.length + ' products'
+        : cards.length + ' products';
+    }
+    if (empty) empty.hidden = shown !== 0;
+  }
+
+  function resetProductSearch() {
+    input.value = '';
+    applyProductSearch();
+    input.focus();
+  }
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyProductSearch();
+    }
+  });
+  if (submit) submit.addEventListener('click', applyProductSearch);
+  if (reset) reset.addEventListener('click', resetProductSearch);
+  applyProductSearch();
+})();
+
+document.querySelectorAll('.logo-picker').forEach(function (root) {
+  var hidden = root.querySelector('.logo-picker-value');
+  var search = root.querySelector('.logo-picker-search');
+  var options = root.querySelectorAll('.logo-option');
+  var summaryText = root.querySelector('.logo-picker-summary-text');
+  var summaryIcon = root.querySelector('.logo-picker-summary-icon');
+  var summaryPreview = root.querySelector('.logo-picker-summary-preview');
+  var fold = root.querySelector('.logo-picker-fold');
+
+  function updateSummary(slug, label, preview) {
+    if (summaryText) {
+      summaryText.textContent = label || 'No logo — click to choose';
+      summaryText.classList.toggle('muted', !slug);
+    }
+    if (summaryPreview) {
+      var img = summaryPreview.querySelector('.logo-picker-summary-icon');
+      var ph = summaryPreview.querySelector('.logo-picker-summary-placeholder');
+      if (slug && preview) {
+        if (!img) {
+          img = document.createElement('img');
+          img.className = 'logo-picker-summary-icon';
+          summaryPreview.innerHTML = '';
+          summaryPreview.appendChild(img);
+        }
+        img.src = preview;
+        img.alt = label || '';
+      } else {
+        summaryPreview.innerHTML = '<span class="logo-picker-summary-placeholder">🏷</span>';
+      }
+    }
+  }
+
+  function select(slug, label, preview) {
+    hidden.value = slug || '';
+    options.forEach(function (btn) {
+      btn.classList.toggle('is-selected', btn.dataset.slug === slug);
+    });
+    updateSummary(slug, label, preview);
+    if (slug && fold) fold.open = false;
+  }
+
+  options.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      select(btn.dataset.slug, btn.dataset.label, btn.dataset.preview);
+    });
+  });
+  root.querySelector('.logo-picker-clear').addEventListener('click', function () {
+    select('', '', '');
+  });
+  if (search) {
+    search.addEventListener('input', function () {
+      var q = search.value.trim().toLowerCase();
+      options.forEach(function (btn) {
+        var show = !q || btn.dataset.label.toLowerCase().includes(q) || btn.dataset.slug.includes(q);
+        btn.style.display = show ? '' : 'none';
+      });
+    });
+  }
+});
+document.querySelectorAll('.stock-bulk-form').forEach(function (form) {
+  var master = form.querySelector('.stock-select-all');
+  if (!master) return;
+  master.addEventListener('change', function () {
+    form.querySelectorAll('.stock-cb').forEach(function (cb) {
+      cb.checked = master.checked;
+    });
+  });
+});
+</script>
+{% endblock %}

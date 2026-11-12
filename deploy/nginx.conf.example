@@ -1,0 +1,56 @@
+# /etc/nginx/sites-available/telegram-shop-admin
+# Reverse-proxies the FastAPI admin dashboard (running on 127.0.0.1:8000)
+# behind HTTPS so you can open it from your browser safely.
+#
+# This money-handling panel must NOT be served over plain HTTP: the login
+# password and session cookie would travel in cleartext. (review M13)
+#
+# SETUP ORDER (important):
+#   1. Install this file with ONLY the HTTP (port 80) block below active. The
+#      443 block stays COMMENTED until a certificate exists — an uncommented
+#      `listen 443 ssl` with no ssl_certificate makes `nginx -t` fail, which
+#      would block the reload in step 2. (review: nginx -t order)
+#        sudo nginx -t && sudo systemctl reload nginx
+#   2. Obtain the certificate (the port-80 + ACME block above is enough):
+#        sudo certbot --nginx -d shop-admin.yourdomain.com
+#      certbot injects a working `listen 443 ssl` server block with the
+#      ssl_certificate paths automatically.
+#   3. (Recommended) move the security headers + proxy location from the
+#      commented 443 template below into certbot's generated 443 block, then
+#        sudo nginx -t && sudo systemctl reload nginx
+
+# HTTP: serve the ACME challenge and redirect everything else to HTTPS.
+server {
+    listen 80;
+    server_name shop-admin.yourdomain.com;
+
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+# HTTPS — TEMPLATE, kept commented so `nginx -t` passes before a cert exists.
+# Uncomment AFTER certbot has issued the certificate (or let certbot generate
+# its own 443 block and copy these hardening directives into it).
+# server {
+#     listen 443 ssl;
+#     http2 on;
+#     server_name shop-admin.yourdomain.com;
+#
+#     ssl_certificate     /etc/letsencrypt/live/shop-admin.yourdomain.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/shop-admin.yourdomain.com/privkey.pem;
+#
+#     # Security headers for the admin panel.
+#     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+#     add_header X-Frame-Options           "DENY" always;
+#     add_header X-Content-Type-Options    "nosniff" always;
+#     add_header Referrer-Policy           "no-referrer" always;
+#
+#     location / {
+#         proxy_pass http://127.0.0.1:8000;
+#         proxy_http_version 1.1;
+#         proxy_set_header Host              $host;
+#         proxy_set_header X-Real-IP         $remote_addr;
+#         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+#         proxy_set_header X-Forwarded-Proto $scheme;
+#     }
+# }

@@ -1,0 +1,47 @@
+{% macro logo_picker(name, brand_list, previews, selected='', field_id='') %}
+{% set ns = namespace(selected_label='') %}
+{% for slug, label in brand_list %}
+  {% if selected == slug %}{% set ns.selected_label = label %}{% endif %}
+{% endfor %}
+<div class="logo-picker" data-field="{{ field_id or name }}">
+  <input type="hidden" name="{{ name }}" value="{{ selected }}" class="logo-picker-value" />
+  <details class="logo-picker-fold">
+    <summary class="logo-picker-summary">
+      <span class="logo-picker-summary-preview">
+        {% if selected and previews.get(selected) %}
+        <img src="{{ previews[selected] }}" alt="" class="logo-picker-summary-icon" />
+        {% else %}
+        <span class="logo-picker-summary-placeholder">🏷</span>
+        {% endif %}
+      </span>
+      <span class="logo-picker-summary-text">
+        {% if ns.selected_label %}{{ ns.selected_label }}{% else %}No logo — click to choose{% endif %}
+      </span>
+      <span class="logo-picker-summary-chevron muted">Change logo</span>
+    </summary>
+    <div class="logo-picker-body">
+      <div class="logo-picker-toolbar">
+        <button type="button" class="logo-picker-clear" title="No logo">✕ None</button>
+        <input type="search" class="logo-picker-search" placeholder="Search logos…" autocomplete="off" />
+      </div>
+      <div class="logo-picker-grid">
+        {% for slug, label in brand_list %}
+        <button type="button"
+                class="logo-option{% if selected == slug %} is-selected{% endif %}"
+                data-slug="{{ slug }}"
+                data-label="{{ label }}"
+                data-preview="{{ previews[slug] }}"
+                title="{{ label }}">
+          <img src="{{ previews[slug] }}" alt="{{ label }}" loading="lazy"
+               onerror="this.style.opacity='0.3'" />
+          <span>{{ label }}</span>
+        </button>
+        {% else %}
+        <p class="muted logo-picker-empty">No logos loaded — run setup_brand_logos.py on the server.</p>
+        {% endfor %}
+      </div>
+      <p class="logo-picker-hint muted">Click a logo — it appears on the shop button in Telegram.</p>
+    </div>
+  </details>
+</div>
+{% endmacro %}

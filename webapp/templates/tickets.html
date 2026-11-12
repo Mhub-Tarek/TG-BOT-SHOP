@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Support tickets</h1>
+<p class="muted">Issues buyers raised from the bot. Reply to DM the buyer back (marks the ticket <em>answered</em>); set the status to track your queue.</p>
+
+<form method="get" action="/tickets" class="ticket-search toolbar">
+  <input
+    type="text"
+    name="q"
+    value="{{ query }}"
+    placeholder="Search by ticket #, Telegram ID, or @username"
+    autofocus
+    class="toolbar-search"
+  />
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All statuses</option>
+    {% for s in statuses %}
+    <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Search</button>
+  {% if query or status %}
+    <a href="/tickets" class="muted toolbar-clear">Clear</a>
+    <span class="muted toolbar-count">{{ rows|length }} ticket{{ '' if rows|length == 1 else 's' }}{% if status %} with status <code>{{ status }}</code>{% endif %}{% if query %} matching <code>{{ query }}</code>{% endif %}</span>
+  {% endif %}
+</form>
+
+{% if rows %}
+<div class="table-wrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>#</th><th>When</th><th>User</th><th>Order</th>
+      <th>Message</th><th>Status</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in rows %}
+    <tr class="row-{{ t.status }}">
+      <td>#{{ t.id }}</td>
+      <td>{{ t.created_at | datetime }}</td>
+      <td>
+        {% if t.user_username %}@{{ t.user_username }}{% else %}<code>{{ t.user_tg_id }}</code>{% endif %}
+      </td>
+      <td>
+        <a href="/orders?q={{ t.order_id }}">#{{ t.order_id }}</a>
+        {% if t.product_name %}<br><span class="muted">{{ t.product_emoji }} {{ t.product_name }}</span>{% endif %}
+      </td>
+      <td class="ticket-message">
+        {{ t.message }}
+        {% if t.admin_reply %}
+        <div class="ticket-reply muted">↳ <b>You:</b> {{ t.admin_reply }}</div>
+        {% endif %}
+      </td>
+      <td><span class="pill pill-{{ t.status }}">{{ t.status }}</span></td>
+      <td class="ticket-actions">
+        <form method="post" action="/tickets/{{ t.id }}/reply" class="ticket-reply-form">
+          <input name="reply" type="text" placeholder="Reply (DMs the buyer)" maxlength="1000" required />
+          <button type="submit">Reply</button>
+        </form>
+        <form method="post" action="/tickets/{{ t.id }}/status" class="ticket-status-form">
+          <select name="new_status">
+            <option value="open" {% if t.status == 'open' %}selected{% endif %}>open</option>
+            <option value="answered" {% if t.status == 'answered' %}selected{% endif %}>answered</option>
+            <option value="closed" {% if t.status == 'closed' %}selected{% endif %}>closed</option>
+          </select>
+          <button type="submit" class="btn-secondary">Set</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+  {% if query or status %}
+    <p class="muted empty-state">No tickets match your filter.</p>
+  {% else %}
+    <p class="muted empty-state">No tickets yet — buyers can raise one from the bot after a purchase.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

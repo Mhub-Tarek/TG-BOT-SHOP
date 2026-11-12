@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+shop.db
+shop.db-journal
+shop.db-wal
+shop.db-shm
+tests/_smoke.db
+.DS_Store

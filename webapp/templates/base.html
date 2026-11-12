@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ shop }} — Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/static/admin.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">🛍</span> <span class="brand-name">{{ shop }}</span> <span class="brand-tag">Admin</span></div>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primary-nav">
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+    </button>
+    <nav class="nav" id="primary-nav">
+      <a href="/dashboard"  class="{{ 'active' if page == 'dashboard' else '' }}">Dashboard</a>
+      <a href="/statistics" class="{{ 'active' if page == 'statistics' else '' }}">Statistics</a>
+      <a href="/products"   class="{{ 'active' if page == 'products' else '' }}">Products</a>
+      <a href="/orders"     class="{{ 'active' if page == 'orders' else '' }}">Orders</a>
+      <a href="/tickets"    class="{{ 'active' if page == 'tickets' else '' }}">Tickets</a>
+      <a href="/payments"   class="{{ 'active' if page == 'payments' else '' }}">Payments</a>
+      <a href="/users"      class="{{ 'active' if page == 'users' else '' }}">Users</a>
+      <a href="/coupons"    class="{{ 'active' if page == 'coupons' else '' }}">Coupons</a>
+      <a href="/broadcast"  class="{{ 'active' if page == 'broadcast' else '' }}">Broadcast</a>
+      <a href="/logout"     class="logout">Logout</a>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+  // Responsive nav toggle — vanilla, self-contained, runs on every admin page.
+  (function () {
+    var btn = document.querySelector('.nav-toggle');
+    var nav = document.getElementById('primary-nav');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', function () {
+      var open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  })();
+  </script>
+</body>
+</html>

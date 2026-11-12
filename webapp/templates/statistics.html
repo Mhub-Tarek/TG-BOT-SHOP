@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% macro kpi_card(icon, label, cur, prev, kind='info', money=False) %}
+  {% set delta = cur - prev %}
+  <div class="stat stat--{{ kind }}">
+    <div class="stat-icon">{{ icon }}</div>
+    <div class="stat-num">{% if money %}${{ '%.2f' % cur }}{% else %}{{ cur | int }}{% endif %}</div>
+    <div class="stat-label">{{ label }}</div>
+    {% if prev and prev > 0 %}
+      {% set pct = ((delta / prev) * 100) | abs %}
+      <div class="delta {{ 'up' if delta >= 0 else 'down' }}">
+        {{ '▲' if delta >= 0 else '▼' }} {{ '%.0f' % pct }}% <span class="delta-sub">vs prev {{ period }}</span>
+      </div>
+    {% elif cur > 0 %}
+      <div class="delta up">▲ new <span class="delta-sub">vs prev {{ period }}</span></div>
+    {% else %}
+      <div class="delta flat">— <span class="delta-sub">vs prev {{ period }}</span></div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+<div class="stats-head">
+  <h1>Statistics</h1>
+  <div class="period-toggle" role="tablist" aria-label="Time granularity">
+    {% for p in periods %}
+      <a href="/statistics?period={{ p }}"
+         class="{{ 'active' if p == period else '' }}">{{ p | capitalize }}</a>
+    {% endfor %}
+  </div>
+</div>
+<p class="muted">Growth & funnel — comparisons are this {{ period }} vs the previous {{ period }}.
+  Engagement metrics (start / shop / product views) accrue from when tracking was deployed;
+  revenue, orders, deposits and signups reflect full history.</p>
+
+<section class="stats-grid">
+  {{ kpi_card('🆕', 'New users', kpi.new_users.current, kpi.new_users.previous, 'info') }}
+  {{ kpi_card('🚀', '/start opens', kpi.starts.current, kpi.starts.previous, 'info') }}
+  {{ kpi_card('📦', 'Delivered orders', kpi.delivered.current, kpi.delivered.previous, 'info') }}
+  {{ kpi_card('💵', 'Revenue', kpi.revenue.current, kpi.revenue.previous, 'money', money=True) }}
+  <div class="stat stat--info"><div class="stat-icon">👥</div><div class="stat-num">{{ kpi.total_users }}</div><div class="stat-label">Total users</div></div>
+  <div class="stat stat--money"><div class="stat-icon">🏦</div><div class="stat-num">${{ '%.2f' % kpi.total_revenue }}</div><div class="stat-label">All-time revenue</div></div>
+  <div class="stat stat--money"><div class="stat-icon">👛</div><div class="stat-num">${{ '%.2f' % kpi.wallet_liability }}</div><div class="stat-label">Wallet liability</div></div>
+  <div class="stat warn"><div class="stat-icon">🔁</div><div class="stat-num">{{ retention.repeat_rate }}%</div><div class="stat-label">Repeat-buyer rate</div></div>
+</section>
+
+<div class="card chart-card chart-wide" style="margin-bottom: 24px;">
+  <h3>Profit detail — today <span class="muted">(Morocco time)</span></h3>
+  <p class="muted" style="font-size: var(--fs-xs); margin-top: -4px;">
+    Per delivered order: sale price, total code cost, and margin. Totals below count only
+    <strong>Included</strong> rows (every code has a unit cost at restock; admin orders excluded from sums).
+  </p>
+  {% if profit_orders %}
+  <div class="table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Delivered</th>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Sold for</th>
+          <th>Cost</th>
+          <th>Profit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in profit_orders %}
+        <tr class="{{ 'muted' if o.reason != 'included' else '' }}{{ ' warn' if o.reason == 'included' and o.margin < 0 else '' }}">
+          <td><a href="/orders?q={{ o.order_id }}">#{{ o.order_id }}</a></td>
+          <td>{{ o.delivered_at | datetime }}</td>
+          <td>{{ o.product_emoji }} {{ o.product_name }}</td>
+          <td>{{ o.quantity }}</td>
+          <td class="cell-money">${{ '%.2f' % o.payable }}</td>
+          <td class="cell-money">{% if o.reason == 'untracked_cost' %}—{% else %}${{ '%.2f' % o.cogs }}{% endif %}</td>
+          <td class="cell-money">{% if o.reason == 'untracked_cost' %}—{% else %}${{ '%.2f' % o.margin }}{% endif %}</td>
+          <td>
+            {% if o.reason == 'included' %}
+            <span class="pill pill-delivered">Included</span>
+            {% elif o.reason == 'untracked_cost' %}
+            <span class="pill pill-awaiting_payment">No cost</span>
+            {% elif o.reason == 'admin' %}
+            <span class="pill pill-cancelled">Admin</span>
+            {% else %}
+            <span class="pill pill-failed">No delivery time</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><strong>Included totals</strong> ({{ profit_day.eligible_order_count }} orders)</td>
+          <td></td>
+          <td class="cell-money"><strong>${{ '%.2f' % profit_day.eligible_revenue }}</strong></td>
+          <td class="cell-money"><strong>${{ '%.2f' % profit_day.cogs }}</strong></td>
+          <td class="cell-money"><strong>${{ '%.2f' % profit_day.raw_profit }}</strong></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% if profit_day.order_losses > 0 %}
+  <p class="muted" style="font-size: var(--fs-xs); margin-top: 10px;">
+    Losses on underwater included orders today: <strong>${{ '%.2f' % profit_day.order_losses }}</strong>.
+  </p>
+  {% endif %}
+  {% else %}
+  <p class="muted empty-state">No delivered orders today yet.</p>
+  {% endif %}
+</div>
+
+<div class="chart-grid">
+  <div class="card chart-card chart-wide">
+    <h3>New users</h3>
+    <div class="chart-box"><canvas id="chartNewUsers"></canvas></div>
+  </div>
+  <div class="card chart-card chart-wide">
+    <h3>Revenue &amp; deposits <span class="muted">(USDT)</span></h3>
+    <div class="chart-box"><canvas id="chartMoney"></canvas></div>
+  </div>
+  <div class="card chart-card chart-wide">
+    <h3>Engagement — starts vs shop vs product views</h3>
+    <div class="chart-box"><canvas id="chartEngagement"></canvas></div>
+  </div>
+  <div class="card chart-card chart-wide">
+    <h3>Orders by status</h3>
+    <div class="chart-box"><canvas id="chartOrders"></canvas></div>
+  </div>
+  <div class="card chart-card">
+    <h3>Payment method mix <span class="muted">(last {{ window_days }}d)</span></h3>
+    {% if charts.mix %}
+    <div class="chart-box"><canvas id="chartMix"></canvas></div>
+    {% else %}
+    <p class="muted empty-state">No paid orders in this window yet.</p>
+    {% endif %}
+  </div>
+  <div class="card chart-card">
+    <h3>Conversion funnel <span class="muted">(last {{ window_days }}d)</span></h3>
+    {% set f = charts.funnel %}
+    {# Engagement stages (start/shop/product) come from event logging, which
+       only accrues from deploy; orders/payments carry full history. If no
+       engagement has been recorded yet, show those stages as "collecting"
+       rather than empty 0-bars that make the funnel look broken/inverted. #}
+    {% set eng_empty = (f.started == 0 and f.shop_view == 0 and f.product_view == 0) %}
+    {% set fmax = [f.started, f.shop_view, f.product_view, f.ordered, f.checkout, f.paid, f.delivered] | max %}
+    {% set stages = [('Started', f.started, true), ('Viewed shop', f.shop_view, true), ('Viewed product', f.product_view, true), ('Created order', f.ordered, false), ('Checkout', f.checkout, false), ('Paid', f.paid, false), ('Delivered', f.delivered, false)] %}
+    <div class="funnel">
+      {% for name, val, eng in stages %}
+      <div class="funnel-row">
+        <span class="funnel-label">{{ name }}</span>
+        {% if eng and eng_empty %}
+        <span class="funnel-bar funnel-pending"></span>
+        <span class="funnel-val muted">collecting…</span>
+        {% else %}
+        <span class="funnel-bar"><span class="funnel-fill" style="width: {{ ((val / fmax) * 100) if fmax else 0 }}%"></span></span>
+        <span class="funnel-val">{{ val }}{% if f.started and not eng %} <small class="muted">({{ '%.0f' % ((val / f.started) * 100) }}%)</small>{% endif %}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if eng_empty %}
+    <p class="muted" style="margin-top: 10px; font-size: var(--fs-xs);">Engagement stages track from deploy — they fill in as customers use the bot.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="chart-grid">
+  <div class="card chart-card chart-wide">
+    <h3>Top products <span class="muted">(last {{ window_days }}d, by units)</span></h3>
+    {% if top %}
+    <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Product</th><th>Units</th><th>Revenue</th></tr></thead>
+      <tbody>
+        {% for r in top %}
+        <tr>
+          <td>{{ r.emoji }} {{ r.name }}</td>
+          <td>{{ r.units | int }}</td>
+          <td class="cell-money">${{ '%.2f' % r.revenue }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted empty-state">No delivered orders in this window yet.</p>
+    {% endif %}
+  </div>
+  <div class="card chart-card">
+    <h3>Retention</h3>
+    <div class="retention">
+      <div><span class="big">{{ retention.buyers }}</span><span class="muted">buyers (all-time)</span></div>
+      <div><span class="big">{{ retention.repeat }}</span><span class="muted">repeat buyers (≥2)</span></div>
+      <div><span class="big">{{ retention.repeat_rate }}%</span><span class="muted">repeat rate</span></div>
+    </div>
+  </div>
+</div>
+
+<script id="stats-data" type="application/json">{{ charts | tojson }}</script>
+<script src="/static/chart.umd.min.js"></script>
+<script src="/static/statistics.js"></script>
+{% endblock %}

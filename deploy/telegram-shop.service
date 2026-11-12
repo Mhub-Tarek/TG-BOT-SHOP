@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram Shop Bot + Admin Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=shopbot
+Group=shopbot
+WorkingDirectory=/opt/telegram-shop
+Environment="PATH=/opt/telegram-shop/.venv/bin:/usr/bin"
+Environment="SHOP_DB_PATH=/var/lib/telegram-shop/shop.db"
+ExecStart=/opt/telegram-shop/.venv/bin/python /opt/telegram-shop/run.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/telegram-shop/app.log
+StandardError=append:/var/log/telegram-shop/app.log
+
+# hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

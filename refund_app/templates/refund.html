@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#070a10" />
+  <meta name="color-scheme" content="dark" />
+  <title>{{ shop }} Refund Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" />
+  <link rel="stylesheet" href="/refund/static/refund.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero" aria-labelledby="title">
+      <p class="eyebrow">{{ shop }}</p>
+      <h1 id="title">Refund estimate calculator</h1>
+      <p class="lead">
+        Enter your Telegram ID or username to check delivered products that still have refund warranty left.
+      </p>
+      <form class="lookup" method="post" action="{{ base_path }}" novalidate>
+        <label for="telegram_id">Telegram ID or username</label>
+        <div class="field-row">
+          <input
+            id="telegram_id"
+            name="telegram_id"
+            autocomplete="off"
+            placeholder="Example: 123456789 or @username"
+            value="{{ telegram_id }}"
+            required
+          />
+          <button type="submit">Calculate</button>
+        </div>
+        <p class="hint">This only shows an estimate. Contact support to request the refund.</p>
+      </form>
+      {% if error %}
+        <p class="alert" role="alert">{{ error }}</p>
+      {% endif %}
+    </section>
+
+    {% if lookup %}
+      <section class="results" aria-labelledby="results-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Account {{ lookup.lookup_value }}</p>
+            <h2 id="results-title">Refund results</h2>
+          </div>
+          <span class="pill">{{ lookup.eligible_products|length }} eligible product{{ '' if lookup.eligible_products|length == 1 else 's' }}</span>
+        </div>
+
+        {% if lookup.eligible_products %}
+          <p class="select-instruction">
+            Select only the product that has a problem. Orders for the same product are combined.
+          </p>
+          <div class="order-list">
+            {% for product in lookup.eligible_products %}
+              <article class="order-card">
+                <label class="order-card-top order-choice">
+                  <input
+                    class="refund-check"
+                    type="checkbox"
+                    value="{{ "%.2f"|format(product.estimated_refund) }}"
+                    data-label="{{ product.product_name }}"
+                  />
+                  <span class="check-ui" aria-hidden="true"></span>
+                  <div class="order-main">
+                    <span class="product-emoji">{{ product.product_emoji or "•" }}</span>
+                    <div class="order-copy">
+                      <h3>{{ product.product_name }}</h3>
+                      <p class="order-meta">
+                        {{ product.order_count }} order{{ '' if product.order_count == 1 else 's' }}
+                        · Qty {{ product.quantity }}
+                        · Paid ${{ "%.2f"|format(product.payable) }}
+                      </p>
+                      <p class="order-ids">Orders: #{{ product.order_ids|join(", #") }}</p>
+                    </div>
+                  </div>
+                  <div class="refund-amount">
+                    <span>${{ "%.2f"|format(product.estimated_refund) }}</span>
+                    <small>Up to {{ product.min_remaining_days }} of {{ product.warranty_days }} warranty days left</small>
+                  </div>
+                </label>
+                <details class="breakdown">
+                  <summary>Show refund breakdown</summary>
+                  <p class="breakdown-formula">Each row: paid amount × remaining days ÷ warranty days.</p>
+                  <div class="breakdown-scroll" tabindex="0" aria-label="Per-order refund breakdown, swipe horizontally on small screens">
+                    <p class="breakdown-scroll-hint" aria-hidden="true">Swipe table to see all columns</p>
+                    <table class="breakdown-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">Order</th>
+                          <th scope="col">Paid</th>
+                          <th scope="col">Used days</th>
+                          <th scope="col">Warranty</th>
+                          <th scope="col">Remaining</th>
+                          <th scope="col">Refund</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for order in product.orders %}
+                          <tr>
+                            <td data-label="Order">#{{ order.order_id }}</td>
+                            <td data-label="Paid">${{ "%.2f"|format(order.payable) }}</td>
+                            <td data-label="Used days">{{ order.age_days }} day{{ '' if order.age_days == 1 else 's' }}</td>
+                            <td data-label="Warranty">{{ order.warranty_days }} day{{ '' if order.warranty_days == 1 else 's' }}</td>
+                            <td data-label="Remaining">{{ order.remaining_days }} day{{ '' if order.remaining_days == 1 else 's' }}</td>
+                            <td data-label="Refund">${{ "%.2f"|format(order.estimated_refund) }}</td>
+                          </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              </article>
+            {% endfor %}
+          </div>
+          <section class="refund-total" aria-live="polite">
+            <div>
+              <p class="eyebrow">Selected issue total</p>
+              <strong id="selected-total">$0.00</strong>
+              <small id="selected-count">No product selected yet</small>
+            </div>
+            {% if support_url %}
+              <a class="support" href="{{ support_url }}" target="_blank" rel="noopener">
+                <span class="support-long">Contact support to request selected refund</span>
+                <span class="support-short">Contact support</span>
+              </a>
+            {% endif %}
+          </section>
+        {% elif lookup.found_user %}
+          <div class="empty">
+            <h3>No eligible refunds right now</h3>
+            <p>No delivered products with active refund warranty were found for this account.</p>
+          </div>
+        {% else %}
+          <div class="empty">
+            <h3>No matching orders found</h3>
+            <p>Check the Telegram ID and try again. If this looks wrong, contact support.</p>
+          </div>
+        {% endif %}
+
+        {% if lookup.expired_orders %}
+          <details class="expired">
+            <summary>Show orders outside their product warranty ({{ lookup.expired_orders|length }})</summary>
+            <div class="expired-list">
+              {% for order in lookup.expired_orders %}
+                <p>
+                  <strong>#{{ order.order_id }}</strong>
+                  {{ order.product_name }} · {{ order.age_days }} days since delivery · ${{ "%.2f"|format(order.payable) }}
+                </p>
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
+      </section>
+    {% endif %}
+  </main>
+  <script>
+  (function () {
+    var checks = Array.prototype.slice.call(document.querySelectorAll(".refund-check"));
+    var total = document.getElementById("selected-total");
+    var count = document.getElementById("selected-count");
+    if (!checks.length || !total || !count) return;
+
+    function updateTotal() {
+      var selected = checks.filter(function (box) { return box.checked; });
+      var sum = selected.reduce(function (acc, box) {
+        return acc + (parseFloat(box.value) || 0);
+      }, 0);
+      total.textContent = "$" + sum.toFixed(2);
+      count.textContent = selected.length
+        ? selected.length + " selected product/order" + (selected.length === 1 ? "" : "s")
+        : "No product selected yet";
+    }
+
+    checks.forEach(function (box) {
+      box.addEventListener("change", updateTotal);
+    });
+    updateTotal();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Payments</h1>
+
+{% if unmatched %}
+<section>
+  <h2>Unmatched deposits</h2>
+  <p class="muted">Verified funds that could not be safely matched. Credit only after confirming the buyer.</p>
+  <div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>#</th><th>When</th><th>Network</th><th>Amount</th><th>TXID</th><th>Credit to user</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in unmatched %}
+      <tr>
+        <td>#{{ d.id }}</td>
+        <td>{{ d.created_at | datetime }}</td>
+        <td>{{ d.network }}</td>
+        <td class="cell-money">{{ '%.4f' % d.amount }} {{ d.coin }}</td>
+        <td><code>{{ d.txid[:28] }}</code></td>
+        <td>
+          <form method="post" action="/payments/unmatched/{{ d.id }}/credit" class="balance-form">
+            <input type="text" name="user_lookup" placeholder="Telegram ID or @username" required />
+            <button type="submit">Credit</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+
+{% if rows %}
+<div class="table-wrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>#</th><th>When</th><th>User</th><th>Order</th><th>Method</th>
+      <th>Net</th><th>Amount</th><th>Note</th><th>TXID</th><th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in rows %}
+    <tr class="row-{{ p.status }}">
+      <td>#{{ p.id }}</td>
+      <td>{{ p.created_at | datetime }}</td>
+      <td>
+        {% if p.user_username %}@{{ p.user_username }}{% else %}<code>{{ p.user_tg_id }}</code>{% endif %}
+      </td>
+      <td>{{ '#' ~ p.order_id if p.order_id else 'wallet' }}</td>
+      <td>{{ p.method }}</td>
+      <td>{{ p.network }}</td>
+      <td>{{ '%.4f' % p.unique_amount }} {{ p.coin }}</td>
+      <td><code>{{ p.note }}</code></td>
+      <td><code>{{ (p.txid or '-')[:24] }}</code></td>
+      <td><span class="pill pill-{{ p.status }}">{{ p.status }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted empty-state">No payments yet.</p>
+{% endif %}
+{% endblock %}

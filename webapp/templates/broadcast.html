@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Broadcast tools</h1>
+<p class="muted">
+  Sent to all <b>{{ user_count }}</b> users. Product buttons open the selected product in the buyer bot.
+</p>
+
+{% if queued is not none %}
+<div class="banner banner-success">
+  <span class="banner-icon" aria-hidden="true">OK</span>
+  <span>
+    Broadcast started - sending to <b>{{ queued }}</b> users{% if queued_products %} for <b>{{ queued_products }}</b> product(s){% endif %}.
+    You'll get a Telegram DM when it finishes.
+  </span>
+</div>
+{% endif %}
+
+{% if error == 'empty' %}
+<div class="banner banner-error">
+  <span class="banner-icon" aria-hidden="true">!</span>
+  <span>Message can't be empty.</span>
+</div>
+{% elif error == 'bot_offline' %}
+<div class="banner banner-error">
+  <span class="banner-icon" aria-hidden="true">!</span>
+  <span>Bot service is not running - restart the bot process and try again.</span>
+</div>
+{% elif error == 'no_product' %}
+<div class="banner banner-error">
+  <span class="banner-icon" aria-hidden="true">!</span>
+  <span>Choose at least one active product.</span>
+</div>
+{% elif error == 'no_tiers' %}
+<div class="banner banner-error">
+  <span class="banner-icon" aria-hidden="true">!</span>
+  <span>The selected product has no bulk-pricing tiers. Add tiers on Products first.</span>
+</div>
+{% elif error == 'bad_price' %}
+<div class="banner banner-error">
+  <span class="banner-icon" aria-hidden="true">!</span>
+  <span>Flash sale prices must be positive, and the sale price must be lower than the starting price.</span>
+</div>
+{% endif %}
+
+<section class="card broadcast-card">
+  <h2>Bulk Pricing Broadcast</h2>
+  <p class="muted">
+    Sends the current base price and live bulk tiers for each selected product.
+  </p>
+
+  <form method="post" action="/broadcast/bulk-pricing" class="form-grid">
+    <div class="wide broadcast-product-list">
+      {% for p in products %}
+      <label class="broadcast-product-option{% if p.tier_count == 0 %} is-disabled{% endif %}">
+        <input type="checkbox" name="product_ids" value="{{ p.id }}" {% if p.tier_count == 0 %}disabled{% endif %}>
+        <span>
+          <b>{{ p.name }}</b>
+          <small>
+            Base ${{ "%.2f"|format(p.base_price) }} · Stock {{ p.stock }} ·
+            {% if p.tier_count %}{{ p.tier_count }} tier(s){% else %}No bulk tiers{% endif %}
+          </small>
+        </span>
+      </label>
+      {% else %}
+      <p class="muted">No active products found.</p>
+      {% endfor %}
+    </div>
+
+    <button type="submit">Send bulk pricing broadcast</button>
+  </form>
+</section>
+
+<section class="card broadcast-card">
+  <h2>Flash Sale Broadcast</h2>
+  <p class="muted">
+    Sends a sale announcement only. It does not edit the product's actual price.
+  </p>
+
+  <form method="post" action="/broadcast/flash-sale" class="form-grid">
+    <label class="wide">Product
+      <select name="product_id" required>
+        {% for p in products %}
+        <option value="{{ p.id }}">{{ p.name }} - current ${{ "%.2f"|format(p.base_price) }} - stock {{ p.stock }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Beginning price
+      <input type="number" name="was_price" min="0.01" step="0.01" placeholder="1.50" required>
+    </label>
+    <label>End price
+      <input type="number" name="now_price" min="0.01" step="0.01" placeholder="1.00" required>
+    </label>
+    <label>Ends in
+      <input type="text" name="duration" value="12 hours" maxlength="40" required>
+    </label>
+
+    <button type="submit">Send flash sale broadcast</button>
+  </form>
+</section>
+
+<section class="card broadcast-card">
+  <h2>Custom Admin Notification</h2>
+  <p class="muted">
+    Sends your manual message using the existing admin-notification format.
+  </p>
+
+  <form method="post" action="/broadcast" class="form-grid">
+    <label class="wide">Message
+      <textarea name="message" rows="6" placeholder="Type your notification..." required></textarea>
+    </label>
+    <button type="submit">Send custom notification</button>
+  </form>
+</section>
+{% endblock %}

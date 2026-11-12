@@ -1,0 +1,18 @@
+{% macro delivered_items(order, delivered_map) %}
+{% set oid = order.id %}
+{% set items = delivered_map.get(oid, []) %}
+{% if items %}
+<details class="delivered-items">
+  <summary>{{ items|length }} delivered</summary>
+  <ol class="delivered-list">
+    {% for item in items %}
+    <li><code class="delivered-code">{{ item }}</code></li>
+    {% endfor %}
+  </ol>
+</details>
+{% elif order.status in ['paid', 'delivered'] %}
+<span class="muted">No stock linked</span>
+{% else %}
+<span class="muted">—</span>
+{% endif %}
+{% endmacro %}

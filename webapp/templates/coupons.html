@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Coupons</h1>
+
+<details class="card" open>
+  <summary>+ Add coupon</summary>
+  <form method="post" action="/coupons/new" class="form-grid">
+    <label>Code <input name="code" placeholder="SUMMER20" required /></label>
+    <label>Kind
+      <select name="kind">
+        <option value="percent">percent</option>
+        <option value="fixed">fixed (USDT)</option>
+      </select>
+    </label>
+    <label>Value <input name="value" type="number" step="0.01" required /></label>
+    <label>Max uses (0 = unlimited)
+      <input name="max_uses" type="number" value="0" />
+    </label>
+    <button type="submit">Create</button>
+  </form>
+</details>
+
+{% if rows %}
+<div class="table-wrap">
+<table class="data">
+  <thead>
+    <tr>
+      <th>#</th><th>Code</th><th>Kind</th><th>Value</th>
+      <th>Used</th><th>Active</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in rows %}
+    <tr>
+      <td>#{{ c.id }}</td>
+      <td><code>{{ c.code }}</code></td>
+      <td>{{ c.kind }}</td>
+      <td>
+        {% if c.kind == 'percent' %}{{ '%.0f' % c.value }}%{% else %}${{ '%.2f' % c.value }}{% endif %}
+      </td>
+      <td>{{ c.used_count }}/{{ c.max_uses if c.max_uses else '∞' }}</td>
+      <td>{{ '✅' if c.active else '❌' }}</td>
+      <td>
+        <form method="post" action="/coupons/{{ c.id }}/toggle" style="display:inline">
+          <button class="btn-secondary">{{ 'Disable' if c.active else 'Enable' }}</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted empty-state">No coupons yet.</p>
+{% endif %}
+{% endblock %}

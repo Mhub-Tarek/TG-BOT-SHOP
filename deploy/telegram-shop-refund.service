@@ -1,0 +1,25 @@
+[Unit]
+Description=Telegram Shop Refund Calculator
+After=network.target telegram-shop.service
+
+[Service]
+Type=simple
+User=shopbot
+Group=shopbot
+WorkingDirectory=/opt/telegram-shop
+Environment="PATH=/opt/telegram-shop/.venv/bin:/usr/bin"
+Environment="SHOP_DB_PATH=/var/lib/telegram-shop/shop.db"
+ExecStart=/opt/telegram-shop/.venv/bin/python /opt/telegram-shop/run_refund_app.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/telegram-shop/refund.log
+StandardError=append:/var/log/telegram-shop/refund.log
+
+# hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
